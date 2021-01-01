@@ -8,7 +8,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/josiahparappally/dev/b
 
 db = SQLAlchemy(app)
 
-conn = sqlite3.connect('example.db')
+# conn = sqlite3.connect('example.db')
+# cur = conn.cursor()
 
 class Player(db.Model):
     """
@@ -51,6 +52,25 @@ class Player(db.Model):
 def hello_world():
     return 'Hello, World!'
 
+@app.route('/players/<int:player_id>')
+def show_player(player_id):    
+    search_query = "SELECT * FROM player where id={}".format(player_id)
+    conn = sqlite3.connect('example.db')
+    result = conn.execute(search_query)
+    player_result = result.fetchone()
+    if not player_result:
+        return "No player with id: {}".format(player_id)
+    else:
+        ret = {}
+        table_columns_query = ("PRAGMA table_info(%s)" % ("player"))
+        column_names = conn.execute(table_columns_query)
+        index = 0
+        for column in column_names.fetchall():
+            ret[column[1]] = player_result[index]
+            index += 1
+        return ret
+
+
 # conn = sqlite3.connect('example.db')
 # cur = conn.cursor()
 # cur.execute("""INSERT INTO Player (id,name,team,position,age,games_played,
@@ -58,3 +78,4 @@ def hello_world():
 # free_throw_percentage,two_pointers_attempted,two_pointers_percentage,effective_shooting_percentage,true_shooting_percentage,
 # points_per_game,rebounds_per_game,total_rebound_percentage,assists_per_game,assists_percentage,
 # steals_per_game,blocks_per_game,turnovers_per_game,versatility_index,offensive_rating,defensive_rating) VALUES (?,?,?,?,?,?,?,?,?)""",(nm,addr,city,pin))
+
