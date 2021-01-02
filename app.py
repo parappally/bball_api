@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import sqlite3
 
@@ -7,9 +7,6 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/josiahparappally/dev/bball_api/example.db'
 
 db = SQLAlchemy(app)
-
-# conn = sqlite3.connect('example.db')
-# cur = conn.cursor()
 
 class Player(db.Model):
     """
@@ -48,10 +45,6 @@ class Player(db.Model):
     def __repr__(self):
             return '<Player: {}>'.format(self.name)
 
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
-
 @app.route('/players/<int:player_id>')
 def show_player(player_id):    
     search_query = "SELECT * FROM player where id={}".format(player_id)
@@ -70,12 +63,26 @@ def show_player(player_id):
             index += 1
         return ret
 
-
-# conn = sqlite3.connect('example.db')
-# cur = conn.cursor()
-# cur.execute("""INSERT INTO Player (id,name,team,position,age,games_played,
-# minutes_per_game,usage_rate,turnover_rate,free_throws_attempted,
-# free_throw_percentage,two_pointers_attempted,two_pointers_percentage,effective_shooting_percentage,true_shooting_percentage,
-# points_per_game,rebounds_per_game,total_rebound_percentage,assists_per_game,assists_percentage,
-# steals_per_game,blocks_per_game,turnovers_per_game,versatility_index,offensive_rating,defensive_rating) VALUES (?,?,?,?,?,?,?,?,?)""",(nm,addr,city,pin))
+@app.route('/players/stat/<statistic_id>')
+def show_ordered_statistics(statistic_id):
+    conn = sqlite3.connect('example.db')
+    table_columns_query = ("PRAGMA table_info(%s)" % ("player"))
+    query_result = conn.execute(table_columns_query)
+    column_names = query_result.fetchall()
+    statistic_index = -1
+    for index in range(len(column_names)):
+        if column_names[index][1] == statistic_id:
+            statistic_index = index
+    if statistic_index == -1:
+        return "No statistic called: {}".format(statistic_id)
+    else:
+        lst = []
+        search_query = "SELECT * FROM player"
+        query_result = conn.execute(search_query)
+        players = query_result.fetchall()
+        for player in players:
+            if player[statistic_index]:
+                lst.append([player[1], player[statistic_index]])
+        lst.sort(reverse=True, key=lambda player: player[1])
+        return jsonify(lst)
 
