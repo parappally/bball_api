@@ -45,13 +45,27 @@ class Player(db.Model):
     def __repr__(self):
             return '<Player: {}>'.format(self.name)
 
-@app.route('/players/<int:player_id>')
+@app.route('/')
+def hello():
+    return 'Hello, World!'
+
+@app.route('/players', methods=['GET'])
+def show_all_players():
+    search_query = "SELECT * FROM player"
+    conn = sqlite3.connect('example.db')
+    result = conn.execute(search_query).fetchall()
+    d = {}
+    for player in result:
+        d[player[1]] = player[0]
+    return d
+
+@app.route('/players/<int:player_id>', methods=['GET'])
 def show_player(player_id):    
     search_query = "SELECT * FROM player where id={}".format(player_id)
     conn = sqlite3.connect('example.db')
-    result = conn.execute(search_query)
-    player_result = result.fetchone()
-    if not player_result:
+    result = conn.execute(search_query).fetchone()
+    # player_result = result.fetchone()
+    if not result:
         return "No player with id: {}".format(player_id)
     else:
         ret = {}
@@ -59,11 +73,11 @@ def show_player(player_id):
         column_names = conn.execute(table_columns_query)
         index = 0
         for column in column_names.fetchall():
-            ret[column[1]] = player_result[index]
+            ret[column[1]] = result[index]
             index += 1
         return ret
 
-@app.route('/players/stat/<statistic_id>')
+@app.route('/players/stat/<string:statistic_id>', methods=['GET'])
 def show_ordered_statistics(statistic_id):
     conn = sqlite3.connect('example.db')
     table_columns_query = ("PRAGMA table_info(%s)" % ("player"))
