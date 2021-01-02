@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 import sqlite3
 
@@ -7,6 +7,9 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/josiahparappally/dev/bball_api/example.db'
 
 db = SQLAlchemy(app)
+
+minutes_flag = False
+minutes_amount = 15
 
 class Player(db.Model):
     """
@@ -42,17 +45,14 @@ class Player(db.Model):
     offensive_rating = db.Column(db.Float)
     defensive_rating = db.Column(db.Float)
 
-    def __repr__(self):
-            return '<Player: {}>'.format(self.name)
-
 @app.route('/')
 def hello():
     return 'Hello, World!'
 
 @app.route('/players', methods=['GET'])
 def show_all_players():
-    search_query = "SELECT * FROM player"
     conn = sqlite3.connect('example.db')
+    search_query = "SELECT * FROM player"
     result = conn.execute(search_query).fetchall()
     d = {}
     for player in result:
@@ -61,10 +61,9 @@ def show_all_players():
 
 @app.route('/players/<int:player_id>', methods=['GET'])
 def show_player(player_id):    
-    search_query = "SELECT * FROM player where id={}".format(player_id)
     conn = sqlite3.connect('example.db')
+    search_query = "SELECT * FROM player where id={}".format(player_id)
     result = conn.execute(search_query).fetchone()
-    # player_result = result.fetchone()
     if not result:
         return "No player with id: {}".format(player_id)
     else:
@@ -81,22 +80,26 @@ def show_player(player_id):
 def show_ordered_statistics(statistic_id):
     conn = sqlite3.connect('example.db')
     table_columns_query = ("PRAGMA table_info(%s)" % ("player"))
-    query_result = conn.execute(table_columns_query)
-    column_names = query_result.fetchall()
+    query_result = conn.execute(table_columns_query).fetchall()
     statistic_index = -1
-    for index in range(len(column_names)):
-        if column_names[index][1] == statistic_id:
+    for index in range(len(query_result)):
+        if query_result[index][1] == statistic_id:
             statistic_index = index
     if statistic_index == -1:
         return "No statistic called: {}".format(statistic_id)
     else:
         lst = []
-        search_query = "SELECT * FROM player"
-        query_result = conn.execute(search_query)
-        players = query_result.fetchall()
-        for player in players:
+        if minutes_flag:
+            search_query = "SELECT * FROM player where minutes_per_game > {}".format(minutes_amount)
+        else:
+            search_query = "SELECT * FROM player"
+        query_result = conn.execute(search_query).fetchall()
+        for player in query_result:
+            d = {}
             if player[statistic_index]:
-                lst.append([player[1], player[statistic_index]])
-        lst.sort(reverse=True, key=lambda player: player[1])
+                d["name"] = player[1]
+                d[statistic_id] = player[statistic_index]
+                lst.append(d)
+        lst.sort(reverse=True, key=lambda player: player[statistic_id])
         return jsonify(lst)
 
